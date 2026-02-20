@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import tempfile
@@ -47,24 +48,34 @@ if uploaded_file is not None:
         st.error("Unsupported file type. Please upload m4a, mp3, or wav.")
         st.stop()
 
-    with tempfile.TemporaryDirectory(prefix="stt_upload_") as temp_dir:
-        temp_path = Path(temp_dir)
-        source_path = temp_path / uploaded_file.name
-        source_path.write_bytes(uploaded_file.getbuffer())
+    file_bytes = uploaded_file.getvalue()
+    file_hash = hashlib.sha256(file_bytes).hexdigest()
+    upload_key = f"{uploaded_file.name}:{len(file_bytes)}:{file_hash}:{save_words}"
 
-        try:
-            with st.spinner("Preparing audio..."):
-                if suffix == ".wav":
-                    wav_path = source_path
-                else:
-                    wav_path = convert_to_wav(source_path)
+    if st.session_state.get("last_upload_key") != upload_key:
+        with tempfile.TemporaryDirectory(prefix="stt_upload_") as temp_dir:
+            temp_path = Path(temp_dir)
+            source_path = temp_path / uploaded_file.name
+            source_path.write_bytes(file_bytes)
 
-            with st.spinner("Transcribing..."):
-                transcription = transcribe_file(wav_path, save_words=save_words)
-        except Exception as exc:
-            st.error(f"Processing failed: {exc}")
-            st.stop()
+            try:
+                with st.spinner("Preparing audio..."):
+                    if suffix == ".wav":
+                        wav_path = source_path
+                    else:
+                        wav_path = convert_to_wav(source_path)
 
+                with st.spinner("Transcribing..."):
+                    transcription = transcribe_file(wav_path, save_words=save_words)
+            except Exception as exc:
+                st.error(f"Processing failed: {exc}")
+                st.stop()
+
+        st.session_state["last_upload_key"] = upload_key
+        st.session_state["last_transcription"] = transcription
+        st.session_state["last_file_stem"] = Path(uploaded_file.name).stem
+
+    transcription = st.session_state.get("last_transcription", {})
     transcript_text = transcription.get("text", "")
 
     st.subheader("Transcript")
@@ -73,7 +84,7 @@ if uploaded_file is not None:
     txt_bytes = transcript_text.encode("utf-8")
     json_bytes = json.dumps(transcription, indent=2, ensure_ascii=False).encode("utf-8")
 
-    file_stem = Path(uploaded_file.name).stem
+    file_stem = st.session_state.get("last_file_stem", Path(uploaded_file.name).stem)
 
     st.download_button(
         label="Download .txt",
