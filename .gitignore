@@ -1,0 +1,22 @@
+# Virtual environment artifacts
+Include/
+Lib/
+Scripts/
+etc/
+share/
+pyvenv.cfg
+
+# Python cache/build artifacts
+__pycache__/
+*.py[cod]
+*.pyd
+*.so
+.pytest_cache/
+
+# Runtime/local assets
+model/
+*.zip
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
