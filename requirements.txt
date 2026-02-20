@@ -4,3 +4,4 @@ pydub
 deepmultilingualpunctuation
 torch
 sentencepiece
+transformers==4.30.2

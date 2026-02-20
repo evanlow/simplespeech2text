@@ -547,3 +547,28 @@ Purpose: Track live Prime Directive compliance for every task in this repository
 - Next Planned Steps:
   - Commit and push dependency update.
   - Re-deploy and verify punctuation works in Streamlit Cloud.
+
+### 2026-02-20 SESSION-020 - Implementation
+- Trigger Event: Hosted punctuation error `grouped_entities` incompatibility in transformers pipeline.
+- Directive Compliance KPI: 5/6 green
+- Status Breakdown:
+  - Green:
+    - #1 Compliance tracking maintained with this checkpoint.
+    - #2 Python actions executed in venv context.
+    - #3 Baseline tests remain passing.
+    - #4 Post-change tests executed and passing (15/15).
+    - #6 Compliance status recorded in this update.
+  - Yellow:
+    - #5 UI smoke-check completion pending hosted verification after redeploy.
+  - Red:
+    - none
+- KPI Delta Since Previous Entry:
+  - No KPI count change; dependency compatibility fix applied.
+- Actions Completed Since Last Entry:
+  - Pinned `transformers==4.30.2` in `requirements.txt` for punctuation compatibility.
+  - Re-ran backend tests: `.\\Scripts\\python.exe -m unittest discover -s tests -v` -> 15/15 passed.
+- Risks / Blockers / Corrective Actions:
+  - Hosted rebuild required to pick up pinned version.
+- Next Planned Steps:
+  - Commit and push requirements update.
+  - Re-deploy and verify punctuation works in Streamlit Cloud.
