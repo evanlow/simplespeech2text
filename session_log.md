@@ -493,3 +493,29 @@ Purpose: Track live Prime Directive compliance for every task in this repository
 - Next Planned Steps:
   - Commit and push punctuation enhancement.
   - Re-run hosted smoke test to confirm punctuated transcript and download behavior.
+
+### 2026-02-20 SESSION-018 - Risk
+- Trigger Event: Hosted app error while initializing punctuation model.
+- Directive Compliance KPI: 5/6 green
+- Status Breakdown:
+  - Green:
+    - #1 Compliance tracking maintained with risk checkpoint.
+    - #2 Python actions executed in venv context.
+    - #3 Baseline tests remain passing.
+    - #4 Post-change tests executed and passing (15/15).
+    - #6 Compliance status recorded in this update.
+  - Yellow:
+    - #5 UI smoke-check completion pending hosted verification after deploy.
+  - Red:
+    - none
+- KPI Delta Since Previous Entry:
+  - No KPI count change; punctuation failure now handled gracefully.
+- Actions Completed Since Last Entry:
+  - Updated `punctuation.punctuate_text` to return `(text, applied)` and fall back on errors.
+  - Updated `app.py` to show info banner when punctuation is unavailable.
+  - Updated punctuation tests to cover fallback path.
+  - Re-ran backend tests: `.\Scripts\python.exe -m unittest discover -s tests -v` -> 15/15 passed.
+- Risks / Blockers / Corrective Actions:
+  - Punctuation model may still be unavailable on Streamlit Cloud; fallback keeps app functional.
+- Next Planned Steps:
+  - Commit and push fallback fix, then re-run hosted smoke test for punctuation behavior.

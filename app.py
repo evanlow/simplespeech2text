@@ -70,17 +70,26 @@ if uploaded_file is not None:
                 st.stop()
 
         with st.spinner("Adding punctuation..."):
-            punctuated_text = punctuate_text(transcription.get("text", ""))
+            punctuated_text, punctuation_applied = punctuate_text(
+                transcription.get("text", "")
+            )
 
         transcription["text"] = punctuated_text
 
         st.session_state["last_upload_key"] = upload_key
         st.session_state["last_transcription"] = transcription
         st.session_state["last_punctuated"] = punctuated_text
+        st.session_state["punctuation_applied"] = punctuation_applied
         st.session_state["last_file_stem"] = Path(uploaded_file.name).stem
 
     transcription = st.session_state.get("last_transcription", {})
     transcript_text = transcription.get("text", "")
+    punctuation_applied = st.session_state.get("punctuation_applied", True)
+
+    if not punctuation_applied:
+        st.info(
+            "Punctuation model unavailable in this environment; showing raw transcript."
+        )
 
     st.subheader("Transcript")
     st.text_area("Full transcript", value=transcript_text, height=300)
