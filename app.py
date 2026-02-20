@@ -9,26 +9,29 @@ import streamlit as st
 
 from convert import convert_to_wav
 from core import transcribe_file
+from model_setup import ensure_model_available
 
 
 st.set_page_config(page_title="Simple Text2Speech - Speech to Text", page_icon="🎙️")
 st.title("Speech to Text")
 st.write("Upload an audio file (m4a, mp3, wav) to transcribe it.")
 
-default_model_path = os.getenv("VOSK_MODEL_PATH", "model")
-model_path_input = st.text_input(
-    "Vosk model directory",
-    value=default_model_path,
-    help="Path to an extracted Vosk model folder (contains am/, conf/, graph/, ivector/).",
-)
-os.environ["VOSK_MODEL_PATH"] = model_path_input.strip() or default_model_path
-model_path = Path(os.environ["VOSK_MODEL_PATH"])
+@st.cache_resource
+def prepare_model() -> Path:
+    return ensure_model_available()
 
-if not model_path.exists() or not model_path.is_dir():
-    st.warning(
-        "Model not found. Download and extract a Vosk model, then set its folder path above. "
-        "You can also place it in ./model."
+
+try:
+    with st.spinner("Preparing speech model..."):
+        model_path = prepare_model()
+except Exception as exc:
+    st.error(f"Model setup failed: {exc}")
+    st.info(
+        "Set VOSK_MODEL_PATH to a valid extracted model folder, or allow automatic download."
     )
+    st.stop()
+
+st.caption(f"Model ready: {model_path}")
 
 uploaded_file = st.file_uploader(
     "Choose an audio file",
@@ -38,12 +41,6 @@ uploaded_file = st.file_uploader(
 save_words = st.checkbox("Include word timestamps in JSON output", value=False)
 
 if uploaded_file is not None:
-    if not model_path.exists() or not model_path.is_dir():
-        st.error(
-            "Cannot transcribe yet: Vosk model directory is not configured correctly."
-        )
-        st.stop()
-
     suffix = Path(uploaded_file.name).suffix.lower()
 
     if suffix not in {".m4a", ".mp3", ".wav"}:

@@ -338,3 +338,81 @@ Purpose: Track live Prime Directive compliance for every task in this repository
 - Next Planned Steps:
   - Continue with git initialization and first push to remote once you confirm.
   - Complete UI smoke test after model path is configured.
+
+### 2026-02-20 SESSION-012 - Handoff
+- Trigger Event: User requested git initialization and push to GitHub repository.
+- Directive Compliance KPI: 5/6 green
+- Status Breakdown:
+  - Green:
+    - #1 Compliance tracking maintained with this handoff checkpoint.
+    - #2 Pre-commit tests executed in venv context.
+    - #3 Baseline tests passing.
+    - #4 Post-change tests passing (8/8).
+    - #6 Compliance status recorded in this update.
+  - Yellow:
+    - #5 UI smoke-check success path remains pending until Vosk model setup allows full transcription/download validation.
+  - Red:
+    - none
+- KPI Delta Since Previous Entry:
+  - No KPI count change; repository lifecycle milestone completed.
+- Actions Completed Since Last Entry:
+  - Confirmed Git identity is configured (`user.name` and `user.email`).
+  - Created initial commit on `main` with Prime Directive-compatible ASCII commit message.
+  - Configured remote `origin` to `https://github.com/evanlow/simplespeech2text.git`.
+  - Pushed `main` successfully and set upstream tracking.
+- Risks / Blockers / Corrective Actions:
+  - Remaining runtime blocker unchanged: Vosk model directory required for full UI success-path smoke test.
+- Next Planned Steps:
+  - Configure/download Vosk model folder and rerun manual smoke test to complete KPI #5.
+
+### 2026-02-20 SESSION-013 - Implementation
+- Trigger Event: User asked to proceed with Streamlit online hosting setup.
+- Directive Compliance KPI: 5/6 green
+- Status Breakdown:
+  - Green:
+    - #1 Compliance tracking maintained with implementation checkpoint.
+    - #2 Python/test actions executed in venv context.
+    - #3 Baseline backend tests remain passing.
+    - #4 Post-change test gate executed during this cycle.
+    - #6 Compliance status recorded in this update.
+  - Yellow:
+    - #5 UI smoke-test success path pending final end-to-end run with model download complete.
+  - Red:
+    - none
+- KPI Delta Since Previous Entry:
+  - No KPI count change; deployment-readiness features added.
+- Actions Completed Since Last Entry:
+  - Added `model_setup.py` with automatic Vosk model discovery/download/extract/cache.
+  - Updated `app.py` to bootstrap model automatically with `st.cache_resource`.
+  - Added `packages.txt` with `ffmpeg` for Streamlit Cloud system dependency installation.
+  - Added `tests/test_model_setup.py` for bootstrap behavior.
+- Risks / Blockers / Corrective Actions:
+  - First hosted startup may take longer due to model download.
+- Next Planned Steps:
+  - Finalize and push hosted-readiness commit.
+  - Perform manual hosted smoke verification after deployment.
+
+### 2026-02-20 SESSION-014 - Risk
+- Trigger Event: Test execution found failure in `test_model_setup` (temporary directory scope issue).
+- Directive Compliance KPI: 5/6 green
+- Status Breakdown:
+  - Green:
+    - #1 Compliance tracking maintained with explicit risk checkpoint.
+    - #2 Tests run with venv interpreter.
+    - #3 Baseline tests preserved.
+    - #4 Post-change tests restored to passing after fix.
+    - #6 Compliance status recorded.
+  - Yellow:
+    - #5 UI smoke-test completion still pending full runtime flow confirmation.
+  - Red:
+    - none
+- KPI Delta Since Previous Entry:
+  - Temporary regression corrected in same cycle; no KPI count change.
+- Actions Completed Since Last Entry:
+  - Fixed `tests/test_model_setup.py` assertions to run before temporary directory cleanup.
+  - Re-ran full tests: `.\Scripts\python.exe -m unittest discover -s tests -v`.
+  - Result: 12/12 passing.
+- Risks / Blockers / Corrective Actions:
+  - None after correction.
+- Next Planned Steps:
+  - Commit and push deployment-readiness updates.
