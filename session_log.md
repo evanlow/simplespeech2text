@@ -650,6 +650,32 @@ Purpose: Track live Prime Directive compliance for every task in this repository
 - Next Planned Steps:
   - Continue standard cadence updates on next work session.
 
+### 2026-02-20 SESSION-025 - Implementation
+- Trigger Event: User requested Prime Directive revision based on session learnings.
+- Directive Compliance KPI: 6/6 green
+- Status Breakdown:
+  - Green:
+    - #1 Compliance tracking maintained with directive update checkpoint.
+    - #2 Python actions executed in venv context.
+    - #3 Baseline tests pass clean.
+    - #4 Post-change tests pass clean (15/15).
+    - #5 UI smoke checks completed in hosted environment.
+    - #6 Compliance status recorded in this update.
+  - Yellow:
+    - none
+  - Red:
+    - none
+- KPI Delta Since Previous Entry:
+  - No KPI count change; directive updated while maintaining 6/6 green.
+- Actions Completed Since Last Entry:
+  - Added Hosted Deployment Addendum and Streamlit rerun discipline to `prime_directive.md`.
+  - Updated revision history with 2026-02-20 entry.
+  - Re-ran backend tests: `.\\Scripts\\python.exe -m unittest discover -s tests -v` -> 15/15 passed.
+- Risks / Blockers / Corrective Actions:
+  - None reported.
+- Next Planned Steps:
+  - Commit and push Prime Directive updates if desired.
+
 ### 2026-02-20 SESSION-021 - Implementation
 - Trigger Event: Hosted punctuation error persists due to `grouped_entities` incompatibility in transformers.
 - Directive Compliance KPI: 5/6 green

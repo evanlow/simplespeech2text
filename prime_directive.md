@@ -2425,6 +2425,61 @@ Tests are tools, not guarantees. The best test is actually using your applicatio
 
 ---
 
+## 🌐 Hosted Deployment Addendum (New)
+
+### Why This Exists
+Cloud hosting introduces new failure modes that local tests cannot catch:
+- Dependency install failures (large ML packages, GPU/CUDA wheels)
+- Incompatible library versions in managed runtimes
+- Missing system binaries (ffmpeg, etc.)
+- Cold-start latency and model download behavior
+
+### Mandatory Hosted Checks
+
+1. **Verify dependency install logs** after any dependency change
+  - Look for failed installs, version conflicts, or large GPU wheel downloads
+  - If install fails, prefer lighter dependencies or explicit pins
+
+2. **Pin compatibility-sensitive libraries**
+  - If a library depends on a specific `transformers` API, pin it
+  - Document the reason in commit message or session log
+
+3. **Prefer lightweight fallbacks for hosted reliability**
+  - If ML dependencies break hosting, use a simpler fallback that keeps the app running
+  - You can move heavier ML to a separate hosted API later
+
+4. **System dependencies must be declared**
+  - For Streamlit Cloud, use `packages.txt` (e.g., `ffmpeg`)
+  - For other hosts, add platform-specific install docs
+
+### Hosted Smoke Test (Required)
+
+- Deploy and run a full end-to-end flow in the hosted environment
+- Verify:
+  - App starts without install errors
+  - Upload works
+  - Transcription returns
+  - Downloads succeed
+  - Any optional features (punctuation, timestamps) work or fall back cleanly
+
+---
+
+## ♻️ Streamlit Rerun Discipline (New)
+
+Streamlit reruns the script on most UI interactions. This can retrigger expensive work unless you explicitly cache.
+
+**Mandatory rule for heavy work (transcription, conversion, model downloads):**
+- Use `st.session_state` to cache results keyed by input content
+- Use `st.cache_resource` for heavyweight model initialization
+- Never re-run transcription on download button clicks
+
+**Checklist for Streamlit apps:**
+- [ ] Expensive work is cached by input hash
+- [ ] Model initialization uses `st.cache_resource`
+- [ ] Download buttons do not re-trigger heavy computation
+
+---
+
 ### Code Quality Standards Achieved
 ✅ Single authoritative backtest module (backtest/)  
 ✅ No duplicate implementations  
@@ -2703,6 +2758,7 @@ Approved ASCII replacements ONLY:
 ---
 
 **Revision History:**
+- **2026-02-20 (v9): Hosted Deployment Addendum + Streamlit Rerun Discipline** - Added hosted dependency checks, version pinning guidance, and system dependency declaration for cloud deployments; added Streamlit rerun caching discipline to prevent unintended reprocessing; required hosted smoke tests for end-to-end verification
 - **2026-02-19 (v8): Git Bash as Required Standard** - Upgraded Git Bash from "optional recommendation" to "REQUIRED team standard" (v7 was incomplete approach); Added "Why Git Bash is the standard for ClearMeet" section emphasizing quality culture alignment; Created detailed "Setup Guide: Switching to Git Bash" for team onboarding; Added "Why This Reflects Our Quality Culture" section explaining how this standard demonstrates commitment to highest quality; Established daily workflow division: PowerShell for Python/Flask operations, Git Bash exclusively for git operations; Made clear that cosmetic errors undermine professionalism and damage credibility; Updated all requirements to mandate Git Bash; Secondary fallback (ASCII-only messages) now clearly marked as "minimum if team refuses Git Bash" (not recommended); Rationale: Single cosmetic error affects entire credibility - preventing the issue is better than working around it; Philosophy: "We care enough to eliminate eyesores entirely"
 - **2026-02-19 (v7): Git Best Practices & ASCII Commit Messages** - Added comprehensive Git best practices section addressing PowerShell Unicode encoding issues; Established ASCII-only commit message standard to prevent encoding errors; Documented three solutions (ASCII messages, Git Bash, UTF-8 config); Updated commit message format to use [PASS]/[FAIL] instead of Unicode; Added tool comparison table and recommendations; Commits with special characters will no longer cause error messages
 - **2026-02-16 (v6): Audio Chunking for Large Files** - Implemented time-based audio chunking to handle files >20MB (up to 200MB); Used lazy import pattern for pydub to avoid Python 3.13 audioop compatibility issues when not chunking; Added Phase 1 progress UI (loading overlay with spinner) to inform users during long transcription operations; Updated validation to accept larger files (16MB → 200MB); Maintained backward compatibility for small files (<20MB) using single-file transcription; Design decision: Simple time-based chunking (Option B) over silence detection (Option A) for faster implementation and reliability; Testing approach: Verified existing tests still pass (17/19 audio tests), chunking tested with large file; Future enhancement: Real-time progress updates via SSE/WebSocket (Phase 2); Key lesson: Lazy imports can resolve dependency conflicts while maintaining functionality
