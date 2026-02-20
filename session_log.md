@@ -465,3 +465,31 @@ Purpose: Track live Prime Directive compliance for every task in this repository
   - None; change removes mono/PCM mismatch errors for WAV uploads.
 - Next Planned Steps:
   - Commit and push fix, then re-run hosted smoke test for WAV upload and downloads.
+
+### 2026-02-20 SESSION-017 - Implementation
+- Trigger Event: User requested grammatical punctuation restoration using `deepmultilingualpunctuation` (always on).
+- Directive Compliance KPI: 5/6 green
+- Status Breakdown:
+  - Green:
+    - #1 Compliance tracking maintained with this implementation checkpoint.
+    - #2 Python actions executed in venv context.
+    - #3 Baseline tests remain passing.
+    - #4 Post-change tests executed and passing (14/14).
+    - #6 Compliance status recorded in this update.
+  - Yellow:
+    - #5 UI smoke-check completion pending hosted verification after deploy.
+  - Red:
+    - none
+- KPI Delta Since Previous Entry:
+  - No KPI count change; punctuation enhancement implemented and validated.
+- Actions Completed Since Last Entry:
+  - Added `punctuation.py` with cached punctuation model loader.
+  - Updated `app.py` to apply punctuation after transcription.
+  - Added `tests/test_punctuation.py`.
+  - Updated `requirements.txt` with `deepmultilingualpunctuation`.
+  - Re-ran backend tests: `.\Scripts\python.exe -m unittest discover -s tests -v` -> 14/14 passed.
+- Risks / Blockers / Corrective Actions:
+  - Adds heavier ML dependency; hosted cold starts may be slower.
+- Next Planned Steps:
+  - Commit and push punctuation enhancement.
+  - Re-run hosted smoke test to confirm punctuated transcript and download behavior.

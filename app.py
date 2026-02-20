@@ -11,6 +11,7 @@ import streamlit as st
 from convert import convert_to_wav
 from core import transcribe_file
 from model_setup import ensure_model_available
+from punctuation import punctuate_text
 
 
 st.set_page_config(page_title="Simple Text2Speech - Speech to Text", page_icon="🎙️")
@@ -68,8 +69,14 @@ if uploaded_file is not None:
                 st.error(f"Processing failed: {exc}")
                 st.stop()
 
+        with st.spinner("Adding punctuation..."):
+            punctuated_text = punctuate_text(transcription.get("text", ""))
+
+        transcription["text"] = punctuated_text
+
         st.session_state["last_upload_key"] = upload_key
         st.session_state["last_transcription"] = transcription
+        st.session_state["last_punctuated"] = punctuated_text
         st.session_state["last_file_stem"] = Path(uploaded_file.name).stem
 
     transcription = st.session_state.get("last_transcription", {})
