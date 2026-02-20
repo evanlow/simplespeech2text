@@ -441,3 +441,27 @@ Purpose: Track live Prime Directive compliance for every task in this repository
   - None; change is UI-behavioral and should stabilize download interactions.
 - Next Planned Steps:
   - Push fix to GitHub and re-run hosted smoke test.
+
+### 2026-02-20 SESSION-016 - Implementation
+- Trigger Event: Hosted app error for WAV files requiring mono PCM conversion.
+- Directive Compliance KPI: 5/6 green
+- Status Breakdown:
+  - Green:
+    - #1 Compliance tracking maintained with this implementation checkpoint.
+    - #2 Python actions executed in venv context.
+    - #3 Baseline tests remain passing.
+    - #4 Post-change tests executed and passing (12/12).
+    - #6 Compliance status recorded in this update.
+  - Yellow:
+    - #5 UI smoke-check completion pending re-validation after hosted redeploy.
+  - Red:
+    - none
+- KPI Delta Since Previous Entry:
+  - No KPI count change; normalization behavior enhanced.
+- Actions Completed Since Last Entry:
+  - Updated `app.py` to always normalize uploads via `convert_to_wav`, including WAV inputs.
+  - Re-ran backend tests: `.\Scripts\python.exe -m unittest discover -s tests -v` -> 12/12 passed.
+- Risks / Blockers / Corrective Actions:
+  - None; change removes mono/PCM mismatch errors for WAV uploads.
+- Next Planned Steps:
+  - Commit and push fix, then re-run hosted smoke test for WAV upload and downloads.

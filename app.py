@@ -60,10 +60,7 @@ if uploaded_file is not None:
 
             try:
                 with st.spinner("Preparing audio..."):
-                    if suffix == ".wav":
-                        wav_path = source_path
-                    else:
-                        wav_path = convert_to_wav(source_path)
+                    wav_path = convert_to_wav(source_path)
 
                 with st.spinner("Transcribing..."):
                     transcription = transcribe_file(wav_path, save_words=save_words)
