@@ -10,13 +10,13 @@ def _get_model():
     return PunctuationModel()
 
 
-def punctuate_text(text: str) -> tuple[str, bool]:
+def punctuate_text(text: str) -> tuple[str, bool, str | None]:
     cleaned = text.strip()
     if not cleaned:
-        return "", False
+        return "", False, None
 
     try:
         model = _get_model()
-        return model.restore_punctuation(cleaned), True
-    except Exception:
-        return cleaned, False
+        return model.restore_punctuation(cleaned), True, None
+    except Exception as exc:
+        return cleaned, False, str(exc)

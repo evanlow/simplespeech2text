@@ -2,3 +2,5 @@ streamlit
 vosk
 pydub
 deepmultilingualpunctuation
+torch
+sentencepiece

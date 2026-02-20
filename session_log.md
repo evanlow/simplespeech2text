@@ -519,3 +519,31 @@ Purpose: Track live Prime Directive compliance for every task in this repository
   - Punctuation model may still be unavailable on Streamlit Cloud; fallback keeps app functional.
 - Next Planned Steps:
   - Commit and push fallback fix, then re-run hosted smoke test for punctuation behavior.
+
+### 2026-02-20 SESSION-019 - Implementation
+- Trigger Event: Hosted app consistently reports punctuation model unavailable; add missing ML backend dependencies.
+- Directive Compliance KPI: 5/6 green
+- Status Breakdown:
+  - Green:
+    - #1 Compliance tracking maintained with this implementation checkpoint.
+    - #2 Python actions executed in venv context.
+    - #3 Baseline tests remain passing.
+    - #4 Post-change tests executed and passing (15/15).
+    - #6 Compliance status recorded in this update.
+  - Yellow:
+    - #5 UI smoke-check completion pending hosted verification after deploy.
+  - Red:
+    - none
+- KPI Delta Since Previous Entry:
+  - No KPI count change; punctuation backend dependencies added.
+- Actions Completed Since Last Entry:
+  - Added `torch` and `sentencepiece` to `requirements.txt`.
+  - Updated `punctuation.punctuate_text` to return error detail on failure.
+  - Surfaced punctuation error details in `app.py`.
+  - Updated punctuation tests for new return signature.
+  - Re-ran backend tests: `.\Scripts\python.exe -m unittest discover -s tests -v` -> 15/15 passed.
+- Risks / Blockers / Corrective Actions:
+  - Hosted cold start may increase due to additional ML dependencies.
+- Next Planned Steps:
+  - Commit and push dependency update.
+  - Re-deploy and verify punctuation works in Streamlit Cloud.
