@@ -1,38 +1,71 @@
 from __future__ import annotations
 
-from functools import lru_cache
+from typing import Iterable
 
 
-@lru_cache(maxsize=1)
-def _get_model():
-    try:
-        from transformers.pipelines import TokenClassificationPipeline
-
-        original_sanitize = TokenClassificationPipeline._sanitize_parameters
-
-        def _sanitize_parameters_compat(self, **kwargs):
-            if "grouped_entities" in kwargs and "aggregation_strategy" not in kwargs:
-                grouped = kwargs.pop("grouped_entities")
-                kwargs["aggregation_strategy"] = "simple" if grouped else "none"
-            return original_sanitize(self, **kwargs)
-
-        TokenClassificationPipeline._sanitize_parameters = _sanitize_parameters_compat
-    except Exception:
-        # If transformers isn't available yet, let the model init raise a clear error.
-        pass
-
-    from deepmultilingualpunctuation import PunctuationModel
-
-    return PunctuationModel()
+def _sentence_case(token: str) -> str:
+    if not token:
+        return token
+    return token[0].upper() + token[1:]
 
 
-def punctuate_text(text: str) -> tuple[str, bool, str | None]:
+def _build_from_words(words: Iterable[dict], gap_period: float = 0.8) -> str:
+    output: list[str] = []
+    previous_end: float | None = None
+    start_sentence = True
+
+    for word_info in words:
+        token = str(word_info.get("word", "")).strip()
+        if not token:
+            continue
+
+        start = word_info.get("start")
+        if previous_end is not None and isinstance(start, (int, float)):
+            gap = start - previous_end
+            if gap >= gap_period and output:
+                output[-1] = output[-1].rstrip(" ,") + "."
+                start_sentence = True
+
+        if start_sentence:
+            token = _sentence_case(token)
+            start_sentence = False
+
+        output.append(token)
+
+        end = word_info.get("end")
+        if isinstance(end, (int, float)):
+            previous_end = end
+
+    if output:
+        output[-1] = output[-1].rstrip(" ,") + "."
+
+    return " ".join(output).strip()
+
+
+def _build_from_text(text: str, words_per_sentence: int = 20) -> str:
+    tokens = [token for token in text.split() if token]
+    if not tokens:
+        return ""
+
+    sentences: list[str] = []
+    for i in range(0, len(tokens), words_per_sentence):
+        segment = tokens[i : i + words_per_sentence]
+        if not segment:
+            continue
+        segment[0] = _sentence_case(segment[0])
+        sentences.append(" ".join(segment).rstrip(" ,") + ".")
+
+    return " ".join(sentences).strip()
+
+
+def punctuate_text(text: str, words: list[dict] | None = None) -> tuple[str, bool, str | None]:
     cleaned = text.strip()
     if not cleaned:
         return "", False, None
 
-    try:
-        model = _get_model()
-        return model.restore_punctuation(cleaned), True, None
-    except Exception as exc:
-        return cleaned, False, str(exc)
+    if words:
+        punctuated = _build_from_words(words)
+    else:
+        punctuated = _build_from_text(cleaned)
+
+    return punctuated or cleaned, True, None

@@ -71,7 +71,8 @@ if uploaded_file is not None:
 
         with st.spinner("Adding punctuation..."):
             punctuated_text, punctuation_applied, punctuation_error = punctuate_text(
-                transcription.get("text", "")
+                transcription.get("text", ""),
+                transcription.get("result"),
             )
 
         transcription["text"] = punctuated_text

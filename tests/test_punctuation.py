@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import unittest
-from unittest.mock import Mock, patch
 
 from punctuation import punctuate_text
 
@@ -11,21 +10,21 @@ class TestPunctuation(unittest.TestCase):
         self.assertEqual(punctuate_text(""), ("", False, None))
         self.assertEqual(punctuate_text("   "), ("", False, None))
 
-    def test_punctuate_calls_model(self) -> None:
-        fake_model = Mock()
-        fake_model.restore_punctuation.return_value = "Hello, world."
+    def test_punctuate_with_words(self) -> None:
+        words = [
+            {"word": "hello", "start": 0.0, "end": 0.3},
+            {"word": "world", "start": 0.4, "end": 0.6},
+            {"word": "next", "start": 1.6, "end": 1.8},
+        ]
 
-        with patch("punctuation._get_model", return_value=fake_model):
-            result = punctuate_text("hello world")
+        result = punctuate_text("hello world next", words)
 
-        self.assertEqual(result, ("Hello, world.", True, None))
-        fake_model.restore_punctuation.assert_called_once_with("hello world")
+        self.assertEqual(result, ("Hello world. Next.", True, None))
 
-    def test_fallback_returns_raw_text(self) -> None:
-        with patch("punctuation._get_model", side_effect=RuntimeError("boom")):
-            result = punctuate_text("hello world")
+    def test_punctuate_without_words(self) -> None:
+        result = punctuate_text("one two three four")
 
-        self.assertEqual(result, ("hello world", False, "boom"))
+        self.assertEqual(result, ("One two three four.", True, None))
 
 
 if __name__ == "__main__":
