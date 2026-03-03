@@ -18,7 +18,7 @@ from punctuation import punctuate_text
 
 st.set_page_config(page_title="Simple Text2Speech - Speech to Text", page_icon="🎙️")
 st.title("Speech to Text")
-st.write("Upload an audio or video file (m4a, mp3, mp4, wav) to transcribe it.")
+st.write("Upload an audio or video file (m4a, mov, mp3, mp4, wav) to transcribe it.")
 st.caption("💡 For large files (>200MB), use the URL option below (supports Google Drive, Dropbox, direct links).")
 
 @st.cache_resource
@@ -52,7 +52,7 @@ source_name = None
 if input_method == "Upload file":
     uploaded_file = st.file_uploader(
         "Choose an audio or video file",
-        type=["m4a", "mp3", "mp4", "wav"],
+        type=["m4a", "mov", "mp3", "mp4", "wav"],
     )
     if uploaded_file is not None:
         source_name = uploaded_file.name
@@ -81,8 +81,8 @@ if uploaded_file is not None or url_input:
         suffix = Path(urlparse(url_input).path).suffix.lower() or ".tmp"
         cache_key = f"url:{url_input}:{save_words}"
     
-    if suffix not in {".m4a", ".mp3", ".mp4", ".wav", ".tmp"}:
-        st.error("Unsupported file type. Please use m4a, mp3, mp4, or wav files.")
+    if suffix not in {".m4a", ".mov", ".mp3", ".mp4", ".wav", ".tmp"}:
+        st.error("Unsupported file type. Please use m4a, mov, mp3, mp4, or wav files.")
         st.stop()
 
     if st.session_state.get("last_cache_key") != cache_key:
