@@ -3,6 +3,8 @@
 **Last Updated:** February 20, 2026  
 **Purpose:** Ensure high-quality, maintainable code by learning from past experiences and establishing best practices for all team members, AI agents, and contributors.
 
+**Scope:** This directive is designed for use across all software projects. Project-specific case studies and stack/tool profiles are explicitly labeled as optional examples.
+
 ---
 
 ## 📋 Quick Reference - Before Every Commit
@@ -22,6 +24,8 @@ For UI Changes (HTML/CSS/JavaScript):
 □ Manual smoke test completed (Principle 5)
 □ Browser console checked (F12) - 0 errors
 □ Critical user flows tested
+□ Input validation: Frontend (UX) + Backend (Security) (Principle 7)
+□ Date/time inputs use proper controls (datetime-local or picker library)
 □ Manual testing documented in commit message
 → Ready to commit
 
@@ -51,7 +55,7 @@ Use a live compliance score throughout every working session to make adherence o
 
 ### KPI Score Model
 
-**Score format:** `X/6 green`
+**Score format:** `X/7 green`
 
 - **Green** = Requirement satisfied and evidenced in this session
 - **Yellow** = Not yet applicable or pending the relevant step
@@ -64,7 +68,8 @@ Use a live compliance score throughout every working session to make adherence o
 3. **Confirm baseline tests pass clean** (Principle 1)
 4. **Require post-change tests clean** (Principle 1)
 5. **Enforce UI manual smoke checks** for UI changes (Principle 5)
-6. **Record compliance status in updates**
+6. **Validate input handling: Frontend (UX) + Backend (Security)** for form inputs (Principle 7)
+7. **Record compliance status in updates**
 
 ### Session Reporting Protocol
 
@@ -122,9 +127,9 @@ Every project must maintain a dedicated session log file at repository root:
 ### Example Status Update
 
 ```markdown
-Directive Compliance KPI: 4/6 green
-- Green: #1, #2, #3, #6
-- Yellow: #4 (awaiting post-change test run), #5 (no UI change yet)
+Directive Compliance KPI: 5/7 green
+- Green: #1, #2, #3, #5, #7
+- Yellow: #4 (awaiting post-change test run), #6 (no form input changes yet)
 - Red: none
 ```
 
@@ -137,7 +142,7 @@ Directive Compliance KPI: 4/6 green
 
 **The Protocol:**
 1. ✅ **Check Python path** - run `python -c "import sys; print(sys.executable)"`
-2. ✅ **Verify it points to project venv** - path should contain `\pp2-practice-bot\Scripts\python.exe`
+2. ✅ **Verify it points to project venv** - path should contain `\<project-folder>\Scripts\python.exe`
 3. ❌ **If using global Python** - path will be `C:\Users\...\AppData\Local\Programs\Python\...`
 4. ✅ **Activate venv if needed** - run `.\Scripts\Activate.ps1` (Windows) or `source Scripts/activate` (Unix) **AS A SEPARATE COMMAND**
 5. ✅ **Re-verify after activation** - check Python path again to confirm activation worked
@@ -206,7 +211,7 @@ python -m streamlit run app.py  # Command 2 in same session
 - Run activation as a standalone command first (if not using Scripts paths)
 - Verify Python executable path AFTER activation in a new command
 - Use `.\Scripts\executable.exe` for background tasks or when activation is unclear
-- Check for venv indicators: `(venv)` or `(pp2-practice-bot)` prompt prefix
+- Check for venv indicators: `(venv)` or your project-name prompt prefix
 - Verify packages exist before attempting installation (check `pip list` or test results)
 - Document which environment was used if reporting issues
 
@@ -219,7 +224,7 @@ python -m pip uninstall package1 package2 -y
 .\Scripts\Activate.ps1
 
 # Verify venv is active
-python -c "import sys; print(sys.executable)"  # Should show ...\pp2-practice-bot\Scripts\python.exe
+python -c "import sys; print(sys.executable)"  # Should show ...\<project-folder>\Scripts\python.exe
 
 # Install to venv
 pip install -r requirements.txt
@@ -504,12 +509,12 @@ Consider Selenium/Playwright if:
 - "Looks fine" in UI can still be wrong in exported output
 
 **✅ Always:**
-- Ensure exported/printable MOM text includes full sentences
+- Ensure exported/printable user-facing text includes full sentences
 - If compact tables are used, wrap lines instead of truncating
 - Only use ellipses in explicit previews, never in final export content
 
 **Manual Output Check (Required when rendering changes):**
-- Verify the final MOM text and PDF contain complete action items
+- Verify final exported text and PDF contain complete action items
 - Confirm no ellipses appear in the final output (unless explicitly intended)
 
 **Cost of Skipping Manual UI Testing:**
@@ -534,6 +539,358 @@ Manual Testing: ✓
   - Word counter updates in real-time
   - Browser console: 0 errors
 ```
+
+### 7. **Enterprise Input Validation & Security Standards**
+**CRITICAL:** Never trust frontend validation alone. Always validate and sanitize on the backend.
+
+**The Golden Rules:**
+1. **Frontend validation = UX convenience** (instant feedback, prevent network calls)
+2. **Backend validation = Security boundary** (enforceable, cannot be bypassed)
+3. **Both are required** - frontend for UX, backend for security
+
+---
+
+#### **Date/Time Input Standards**
+
+**❌ NEVER: Plain text fields for time without backend normalization**
+```html
+<!-- BAD: Relies on user typing correct format -->
+<input type="text" name="start_time" placeholder="Enter time">
+```
+
+**❌ NEVER: HTML5 time input without backend conversion**
+```html
+<!-- BAD: Browser sends HH:MM but no timezone info -->
+<input type="time" name="start_time">
+<!-- Backend receives: "09:30" - but in what timezone? -->
+```
+
+**✅ ALWAYS: Use proper datetime controls with timezone handling**
+
+**Option 1: Modern JavaScript DateTime Picker (Recommended for Enterprise)**
+```html
+<!-- Use libraries that handle timezones properly -->
+<!-- Flatpickr, React DatePicker, MUI DateTimePicker, etc. -->
+<input id="meeting-time" type="text">
+<script>
+flatpickr("#meeting-time", {
+    enableTime: true,
+    dateFormat: "Y-m-d H:i",
+    time_24hr: true
+});
+</script>
+```
+
+**Option 2: HTML5 datetime-local (Acceptable for Internal Tools)**
+```html
+<!-- datetime-local includes date + time, no timezone -->
+<input type="datetime-local" name="meeting_time">
+<!-- Browser sends: "2026-02-23T09:30" -->
+```
+
+**Backend Processing (MANDATORY for all datetime inputs):**
+```python
+from datetime import datetime
+from zoneinfo import ZoneInfo  # Python 3.9+
+
+# ✅ GOOD: Convert to UTC, store as ISO 8601
+def process_meeting_time(user_input: str, user_timezone: str = "UTC") -> str:
+    """
+    Convert user's local datetime to UTC ISO 8601 format.
+    
+    Args:
+        user_input: "2026-02-23T09:30" or "2026-02-23 09:30"
+        user_timezone: "Asia/Singapore", "America/New_York", etc.
+    
+    Returns:
+        ISO 8601 UTC string: "2026-02-23T01:30:00Z"
+    """
+    # Parse input (handle multiple formats)
+    dt_naive = datetime.fromisoformat(user_input.replace(' ', 'T'))
+    
+    # Attach user's timezone
+    dt_aware = dt_naive.replace(tzinfo=ZoneInfo(user_timezone))
+    
+    # Convert to UTC
+    dt_utc = dt_aware.astimezone(ZoneInfo("UTC"))
+    
+    # Store as ISO 8601
+    return dt_utc.isoformat()
+
+# Example:
+# User in Singapore enters: "2026-02-23T09:30"
+# Backend stores: "2026-02-23T01:30:00Z" (UTC)
+# Display to user: "2026-02-23T09:30:00+08:00" (Singapore time)
+```
+
+**Database Storage Standards:**
+```sql
+-- ✅ ALWAYS: Store datetimes in UTC
+CREATE TABLE meetings (
+    id SERIAL PRIMARY KEY,
+    meeting_time TIMESTAMP WITH TIME ZONE NOT NULL,  -- PostgreSQL
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ❌ NEVER: Store as local time without timezone
+CREATE TABLE meetings (
+    meeting_time TIMESTAMP,  -- Ambiguous! What timezone?
+    created_at DATETIME      -- SQLite/MySQL - no timezone info
+);
+```
+
+**Display to Users (Convert back to local time):**
+```python
+def display_meeting_time(utc_iso_string: str, user_timezone: str) -> str:
+    """
+    Convert stored UTC time back to user's local timezone.
+    
+    Args:
+        utc_iso_string: "2026-02-23T01:30:00Z"
+        user_timezone: "Asia/Singapore"
+    
+    Returns:
+        "2026-02-23 09:30 SGT"
+    """
+    dt_utc = datetime.fromisoformat(utc_iso_string.replace('Z', '+00:00'))
+    dt_local = dt_utc.astimezone(ZoneInfo(user_timezone))
+    return dt_local.strftime("%Y-%m-%d %H:%M %Z")
+```
+
+**Time Input Validation Rules:**
+1. **Frontend:** Provide picker UI (date + time together)
+2. **Backend:** Parse, validate, convert to UTC ISO 8601
+3. **Storage:** Always UTC with timezone marker (`TIMESTAMP WITH TIME ZONE`)
+4. **Display:** Convert from UTC to user's timezone
+
+**Acceptable Shortcuts for Internal/Small Tools:**
+- Use `datetime-local` input (not `time` alone)
+- Assume single timezone (e.g., company HQ timezone)
+- Store as ISO 8601 string: `YYYY-MM-DDTHH:MM:SS`
+- Document timezone assumption clearly
+
+**❌ NEVER Acceptable (Even for Internal Tools):**
+- Plain text `<input type="text">` for time without backend normalization
+- `<input type="time">` without date - time is meaningless without date
+- Storing time as "09:30" string - ambiguous format, no date context
+- Mixing 12-hour/24-hour formats without clear indicators
+
+---
+
+#### **General Input Validation Standards**
+
+**The Three-Layer Defense:**
+```
+Layer 1: Frontend (HTML5 + JavaScript)
+         ↓ (Can be bypassed - user can modify DOM/disable JS)
+Layer 2: Backend Validation (Python/Node/etc)
+         ↓ (Enforceable - server controls this)
+Layer 3: Database Constraints
+         ↓ (Last line of defense)
+```
+
+**HTML5 Client-Side Validation (UX Layer):**
+```html
+<!-- ✅ GOOD: Provides instant feedback -->
+<input 
+    type="email" 
+    name="email" 
+    required 
+    pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$"
+    title="Enter a valid email address"
+>
+
+<input 
+    type="number" 
+    name="age" 
+    min="0" 
+    max="120" 
+    required
+>
+
+<!-- Date input with min/max constraints -->
+<input 
+    type="date" 
+    name="meeting_date" 
+    min="2026-01-01" 
+    max="2026-12-31"
+    required
+>
+```
+
+**Backend Validation (Security Layer - REQUIRED):**
+```python
+from pydantic import BaseModel, Field, field_validator, EmailStr
+from datetime import datetime, date
+from typing import Optional
+
+class MeetingInput(BaseModel):
+    """Backend validation model - never trust frontend alone"""
+    
+    email: EmailStr  # Validates email format
+    age: int = Field(ge=0, le=120)  # Greater/equal 0, less/equal 120
+    meeting_date: date = Field(...)
+    meeting_time: datetime = Field(...)
+    description: str = Field(min_length=1, max_length=500)
+    
+    @field_validator('meeting_date')
+    @classmethod
+    def validate_date_not_past(cls, v: date) -> date:
+        """Meetings must be in the future"""
+        if v < date.today():
+            raise ValueError("Meeting date cannot be in the past")
+        return v
+    
+    @field_validator('description')
+    @classmethod
+    def sanitize_description(cls, v: str) -> str:
+        """Sanitize to prevent XSS"""
+        # Strip dangerous characters/tags
+        import html
+        return html.escape(v.strip())
+
+# Usage in Flask/FastAPI route:
+@app.post("/create-meeting")
+def create_meeting(data: MeetingInput):
+    # If we reach here, data is validated
+    # Pydantic raises 422 Unprocessable Entity if validation fails
+    return {"status": "success", "meeting": data.model_dump()}
+```
+
+**Database Constraints (Last Defense):**
+```sql
+-- PostgreSQL example
+CREATE TABLE meetings (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) NOT NULL CHECK (email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'),
+    age INT CHECK (age >= 0 AND age <= 120),
+    meeting_date DATE NOT NULL CHECK (meeting_date >= CURRENT_DATE),
+    description TEXT NOT NULL CHECK (LENGTH(description) > 0 AND LENGTH(description) <= 500)
+);
+```
+
+---
+
+#### **Input Sanitization Standards**
+
+**XSS Prevention (Cross-Site Scripting):**
+```python
+import html
+from markupsafe import escape  # If using Flask/Jinja2
+
+# ✅ ALWAYS: Escape user input before displaying in HTML
+user_input = "<script>alert('XSS')</script>"
+safe_output = html.escape(user_input)
+# Result: "&lt;script&gt;alert('XSS')&lt;/script&gt;"
+
+# In templates (Jinja2/Flask auto-escapes by default)
+{{ user_input }}  # ✅ Auto-escaped
+{{ user_input | safe }}  # ❌ DANGEROUS - bypasses escaping
+```
+
+**SQL Injection Prevention:**
+```python
+# ❌ NEVER: String concatenation
+cursor.execute(f"SELECT * FROM users WHERE email = '{user_email}'")
+
+# ✅ ALWAYS: Parameterized queries
+cursor.execute("SELECT * FROM users WHERE email = %s", (user_email,))
+
+# ✅ ALWAYS: Use ORM (SQLAlchemy, Django ORM)
+User.query.filter_by(email=user_email).first()  # Auto-escaped
+```
+
+**File Upload Validation:**
+```python
+from werkzeug.utils import secure_filename
+import os
+
+ALLOWED_EXTENSIONS = {'pdf', 'docx', 'txt'}
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+
+def validate_file_upload(file):
+    """Validate uploaded file"""
+    # Check if file exists
+    if not file or file.filename == '':
+        raise ValueError("No file provided")
+    
+    # Secure the filename (remove path traversal attempts)
+    filename = secure_filename(file.filename)
+    
+    # Check extension
+    ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+    if ext not in ALLOWED_EXTENSIONS:
+        raise ValueError(f"File type .{ext} not allowed")
+    
+    # Check file size
+    file.seek(0, os.SEEK_END)
+    size = file.tell()
+    file.seek(0)  # Reset file pointer
+    if size > MAX_FILE_SIZE:
+        raise ValueError("File too large (max 10MB)")
+    
+    return filename
+```
+
+---
+
+#### **Enterprise DateTime Best Practices Summary**
+
+**For Production/Enterprise Systems:**
+1. ✅ Use modern datetime picker libraries (Flatpickr, MUI, etc.)
+2. ✅ Capture user's timezone (from browser or profile)
+3. ✅ Convert all times to UTC before storage
+4. ✅ Store as ISO 8601 with timezone: `2026-02-23T01:30:00Z`
+5. ✅ Use `TIMESTAMP WITH TIME ZONE` in database
+6. ✅ Convert back to user's timezone when displaying
+7. ✅ Handle daylight saving time transitions
+
+**For Internal Tools (Acceptable Shortcuts):**
+1. ✅ Use `<input type="datetime-local">` (includes date + time)
+2. ✅ Document assumed timezone clearly (e.g., "All times in UTC")
+3. ✅ Store as ISO 8601: `YYYY-MM-DDTHH:MM:SS`
+4. ⚠️ Validate format on backend even if frontend provides picker
+
+**❌ NEVER Acceptable:**
+1. ❌ `<input type="time">` alone without date
+2. ❌ Plain `<input type="text">` for time without backend normalization
+3. ❌ Storing times without date context (e.g., "09:30" string)
+4. ❌ Trusting frontend validation alone
+5. ❌ Storing times without timezone information
+
+---
+
+#### **Validation Checklist (Required for ALL form inputs)**
+
+**Frontend (UX Layer):**
+- [ ] Use appropriate HTML5 input types (`email`, `number`, `date`, `datetime-local`)
+- [ ] Add `required`, `min`, `max`, `pattern` attributes where applicable
+- [ ] Provide clear error messages with `title` attribute
+- [ ] Use datetime pickers for date/time inputs (not plain text)
+- [ ] JavaScript validation for complex rules (matching passwords, etc.)
+
+**Backend (Security Layer - MANDATORY):**
+- [ ] Use Pydantic/Marshmallow/dataclasses for validation models
+- [ ] Validate data types (int, str, email, date, etc.)
+- [ ] Validate ranges (min/max length, min/max value)
+- [ ] Validate formats (email regex, date format, etc.)
+- [ ] Sanitize all text inputs (escape HTML, strip dangerous chars)
+- [ ] Convert datetimes to UTC ISO 8601 before storage
+- [ ] Return clear error messages (400/422 with details)
+
+**Database (Last Defense):**
+- [ ] Add NOT NULL constraints where required
+- [ ] Add CHECK constraints for value ranges
+- [ ] Add UNIQUE constraints where applicable
+- [ ] Use proper column types (`TIMESTAMP WITH TIME ZONE`, `INTEGER`, etc.)
+- [ ] Add foreign key constraints for relationships
+
+**Testing:**
+- [ ] Test with valid inputs → success
+- [ ] Test with missing required fields → 400/422 error
+- [ ] Test with invalid formats → 400/422 error
+- [ ] Test with boundary values (min, max) → correct behavior
+- [ ] Test with malicious inputs (XSS, SQL injection attempts) → sanitized/blocked
 
 ---
 
@@ -592,7 +949,7 @@ Is this a customer-facing production app?
 └─ NO (Internal tool) → Manual testing sufficient ✅
 ```
 
-**For ClearMeet (Small Internal Tool):**
+**For Small Internal Tool Profile (Example):**
 - ✅ Backend tests required (fast, automated)
 - ✅ Manual UI testing required (2-5 min, catches most issues)
 - ❌ E2E browser tests skipped (overhead > benefit for small team)
@@ -857,7 +1214,7 @@ For Integration Tests (ADDITIONAL - MANDATORY):
 ```
 
 **Integration Test Research is NON-NEGOTIABLE:**
-- Skipping this step leads to 37+ API mismatches (Sprint 4 Task 1 experience)
+- Skipping this step leads to API mismatches (see historical sprint example below)
 - 30 minutes research saves 2 hours debugging
 - Existing tests are your API documentation
 - Write the API reference comment block BEFORE writing tests
@@ -949,10 +1306,12 @@ def on_bar(self, market_data):
 
 ## 🎓 Learning from Errors
 
-### ClearMeet Project: Frontend Testing Gap (February 16, 2026)
+_Note: This section contains case studies and examples. Reuse the principles even when your stack, framework, and project domain differ._
+
+### Case Study (Web App): Frontend Testing Gap (February 16, 2026)
 
 #### Lesson: Backend Tests Can't Catch JavaScript Bugs
-**Context:** ClearMeet MOM generator - 138/138 tests passing, but users couldn't submit forms
+**Context:** Web application incident - backend tests were passing, but users couldn't submit forms
 
 **The Incident:**
 - All 138 backend tests passing with 0 warnings ✓
@@ -1071,10 +1430,10 @@ Manual Smoke Test (skipped):
 
 ---
 
-### ClearMeet Project: Premature Commit and Compounding Bugs (February 16, 2026)
+### Case Study (Web App): Premature Commit and Compounding Bugs (February 16, 2026)
 
 #### Lesson: "Fixed" Doesn't Mean Fixed - Three Bugs Masking Each Other
-**Context:** ClearMeet MOM generator - committed "fix" that didn't actually work, required extensive debugging to find THREE separate bugs
+**Context:** Web application incident - a committed "fix" didn't actually work and required extensive debugging to find THREE separate bugs
 
 **The Incident Timeline:**
 1. **First commit (0e64b72):** "Fix form submission bug" - claimed to remove field clearing
@@ -1277,10 +1636,12 @@ Reality: Actually fixed, user confirmed
 
 ---
 
-### Week 4 Day 4 Lessons Learned (November 22, 2025)
+### Historical Lessons (Legacy Project) - Day 4 (November 22, 2025)
+
+_Note: This section is retained as historical reference from a prior project. Apply the principles, not the project-specific module names._
 
 #### Lesson 1: Delete Systematically with Test Verification
-**Context:** Cleaning up duplicate backtesting modules and legacy scripts
+**Context:** Cleaning up duplicate modules and legacy scripts (legacy project example)
 - **What we did right:**
   1. Verified baseline: 138/138 tests passing
   2. Made one logical change (rename backtesting → backtesting_old)
@@ -1318,13 +1679,13 @@ Reality: Actually fixed, user confirmed
   - `tests/test_backtesting.py` - tested deleted module
   
 - **Why delete instead of rewrite:** 
-  - Week 4 backtest/ module is superior and complete
+  - The retained canonical module was superior and complete
   - These were superseded, not complementary
   - Maintaining two implementations creates confusion
   - Can recreate if needed (git history preserved)
 
 #### Lesson 3: Module Consolidation
-**Context:** Had two backtesting directories causing import confusion
+**Context:** Had two overlapping directories causing import confusion
 - **Problem indicators:**
   - Developers confused about which to import
   - Duplicate functionality
@@ -2047,7 +2408,9 @@ Despite the inefficient approach, we achieved:
   
 - **Key insight:** "Warnings are errors waiting to happen - fix them immediately, don't defer to later"
 
-### Week 4 Day 3 Lessons Learned
+### Historical Lessons (Legacy Project) - Day 3
+
+_Note: This section is retained as historical reference from a prior project. The verification discipline applies broadly across projects._
 
 #### Error 1: TimeFrame.DAILY
 - **What happened:** Used `TimeFrame.DAILY` without checking enum
@@ -2217,8 +2580,8 @@ When deleting code:
 
 ### Internal Documentation
 - `README.md` - Project overview
-- `backtest/README.md` - Backtesting framework docs
-- `risk/README.md` - Risk management docs
+- `session_log.md` - Session-level compliance log and KPI checkpoints
+- `tests/` - Living examples of expected behavior and usage patterns
 - Test files - Living examples of correct usage
 
 ### When in Doubt
@@ -2269,94 +2632,13 @@ When deleting code:
 
 ---
 
-### Project Metrics (Sprint 4 Task 1 Complete)
+### Legacy Metrics Archive (Reference Only)
 
-### Current Test Suite Status
-- **Total Tests:** 562
-- **Pass Rate:** 100%
-- **Warning Count:** 0
-- **Last Verified:** 2025-11-25
-- **Test Coverage:** 45% overall, 95%+ in risk-critical modules
-- **Recent Additions:**
-  - Sprint 4 Task 1: 30 tests added (Nov 25) - E2E integration tests, full workflow validation
-  - Sprint 3: 174 tests added (Nov 24-25) - Config, orchestration, comparison, attribution, health monitoring
-  - Sprint 2: 162 tests added (Nov 22-24) - Risk, validation, metrics, promotion, dashboard
-  - Sprint 1: 132 tests added (Nov 20-22) - Lifecycle, paper trading, data pipeline, monitoring, integration
-  - Week 4: 64 baseline tests - Backtest engine, data, profiles, strategy templates
-  
-### Test Files by Sprint
-**Sprint 4 Task 1 (Day 11):**
-  - test_integration_e2e.py (30 tests) - Complete E2E integration validation
+The detailed sprint and module metrics below this directive were originally captured from a prior project phase and are retained as historical context only.
 
-**Sprint 3 (Days 8-10):**
-  - test_config_hot_reload.py (35 tests)
-  - test_multi_strategy_orchestration.py (35 tests)
-  - test_strategy_comparison.py (34 tests)
-  - test_performance_attribution.py (35 tests)
-  - test_health_monitor.py (35 tests)
-
-**Sprint 2 (Days 5-7):**
-  - test_risk_monitor.py (28 tests)
-  - test_metrics_tracker.py (34 tests)
-  - test_validation.py (35 tests)
-  - test_promotion.py (27 tests)
-  - test_validation_monitor.py (38 tests)
-
-**Sprint 1 (Days 1-4):**
-  - test_strategy_lifecycle.py (29 tests)
-  - test_paper_adapter.py (32 tests)
-  - test_realtime_pipeline.py (17 tests)
-  - test_paper_monitor.py (28 tests)
-  - test_paper_trading_integration.py (26 tests)
-
-**Week 4 Baseline:**
-  - test_backtest_engine.py (18 tests)
-  - test_backtest_data.py (18 tests)
-  - test_profiles.py (36 tests)
-  - test_profile_comparison.py (20 tests)
-  - test_strategy_templates.py (46 tests)
-
-### Sprint Completion History
-- **Sprint 4 Task 1 (2025-11-25):** E2E Integration Testing
-  - 30 tests added (comprehensive integration validation)
-  - ~916 lines of test code
-  - 100% test pass rate achieved (532→562)
-  - Zero warnings maintained
-  - Key lesson: API research before integration tests (documented in Lesson 1)
-  - Test progression: 0%→50%→70%→90%→97%→100% (5 correction rounds)
-  - 37+ API mismatches corrected systematically
-  - Commit: 11da7f4
-  - Key achievements: Complete lifecycle validation, multi-component coordination, error handling, data pipeline integrity
-
-- **Sprint 3 (2025-11-24 to 2025-11-25):** Strategy Development Pipeline
-  - 174 tests added (35+35+34+35+35)
-  - ~4,200 lines of code (2,600 production + 1,600 tests)
-  - 100% test pass rate maintained (393→428→463→497→532)
-  - Zero warnings maintained throughout
-  - Velocity: 87 tests/day (61% increase over Sprint 2)
-  - TDD approach: All tests passing immediately after implementation
-  - All 5 tasks completed on schedule
-  - Key achievements: Config hot-reload, multi-strategy orchestration, comparison dashboard, attribution system, health monitoring
-
-- **Sprint 2 (2025-11-22 to 2025-11-24):** Risk & Validation Framework
-  - 162 tests added (28+34+35+27+38)
-  - 3,667 lines of code (2,310 production + 1,357 tests)
-  - 100% test pass rate maintained (231→293→328→357→393)
-  - Zero warnings maintained throughout (fixed SQLAlchemy deprecation on Day 7)
-  - Velocity: 54 tests/day (64% increase over Sprint 1)
-  - All 5 tasks completed on schedule
-  
-- **Sprint 1 (2025-11-20 to 2025-11-22):** Paper Trading Foundation
-  - 132 tests added (29+32+17+28+26)
-  - 100% test pass rate maintained (138→231)
-  - Velocity: 33 tests/day
-  - All 5 tasks completed on schedule
-
-### Cleanup History
-- **2025-11-22:** Deleted legacy backtesting module (8 files, 3,070 lines)
-  - Commit da9a714: Archive step (backtesting → backtesting_old)
-  - Commit 8206109: Deletion step (removed backtesting_old/)
-  - Tests maintained: 138/138 (100%) throughout all deletions
+For current project status and auditable checkpoints, use:
+- `session_log.md` for live KPI and test execution cadence
+- Local test output (`pytest`) for authoritative test and warning counts in this repository
 
 ---
 
@@ -2464,7 +2746,7 @@ Cloud hosting introduces new failure modes that local tests cannot catch:
 
 ---
 
-## ♻️ Streamlit Rerun Discipline (New)
+## ♻️ Stack Profile (Streamlit) - Optional
 
 Streamlit reruns the script on most UI interactions. This can retrigger expensive work unless you explicitly cache.
 
@@ -2480,21 +2762,13 @@ Streamlit reruns the script on most UI interactions. This can retrigger expensiv
 
 ---
 
-### Code Quality Standards Achieved
-✅ Single authoritative backtest module (backtest/)  
-✅ No duplicate implementations  
-✅ 100% test pass rate maintained (532/532)  
-✅ Zero warnings maintained (all warnings investigated and resolved)  
-✅ Clear git history with detailed commit messages  
-✅ Zero breaking changes to production code  
-✅ High coverage in risk-critical modules (95%+)  
-✅ Comprehensive validation framework operational  
-✅ Multi-gate approval workflow enforced  
-✅ Complete audit trail for strategy promotion  
-✅ Multi-strategy orchestration system with attribution tracking  
-✅ Real-time health monitoring with statistical degradation detection  
-✅ Dynamic configuration hot-reload without restarts  
-✅ TDD approach with comprehensive test-first development
+### Code Quality Standards (Target State)
+✅ No duplicate implementations for the same behavior
+✅ 100% test pass rate maintained before and after changes
+✅ Zero warnings maintained (all warnings investigated and resolved)
+✅ Clear git history with detailed commit messages
+✅ Zero breaking changes to existing user-critical workflows
+✅ TDD or immediate regression-test coverage for bug fixes and new logic
 
 ---
 
@@ -2630,13 +2904,13 @@ $env:PYTHONIOENCODING = 'utf-8'
 
 ---
 
-### 🎯 STANDARD FOR CLEARMEET: Git Bash is Required
+### 🎯 Project Profile Example (Windows): Git Bash as Team Standard
 
 **Effective immediately (February 19, 2026):**
 
-Git Bash is the **REQUIRED** git tool for all ClearMeet development. This is not optional; it is a team standard.
+For teams that adopt this profile, Git Bash is the required git tool for development on Windows.
 
-**Why Git Bash is the standard for ClearMeet:**
+**Why Git Bash is a strong team standard for Windows projects:**
 - ✅ **Zero cosmetic errors** - No confusing error messages during commits
 - ✅ **Professional appearance** - Clean git history without artifacts
 - ✅ **Universal compatibility** - Works across all operating systems and environments
@@ -2647,15 +2921,15 @@ Git Bash is the **REQUIRED** git tool for all ClearMeet development. This is not
 
 **This standard means:**
 - When performing git operations (add, commit, push, pull, etc.), use Git Bash
-- PowerShell is only for Python/Flask operations
-- Development workflow: Python/Flask in PowerShell, Git operations in Git Bash
+- PowerShell remains useful for runtime and automation tasks
+- Git operations are standardized in Git Bash for consistency
 - This is a team commitment to quality, not an arbitrary restriction
 
 ---
 
 ### 📋 Setup Guide: Switching to Git Bash
 
-**For ClearMeet contributors:**
+**For contributors using this profile:**
 
 1. **Verify Git for Windows is installed**
    ```powershell
@@ -2744,8 +3018,8 @@ Approved ASCII replacements ONLY:
 
 ### Updating Prime Directive
 
-**ClearMeet team git requirements (non-negotiable):**
-- ✅ **PRIMARY:** Use Git Bash for ALL git operations
+**Git profile requirements (if this profile is adopted):**
+- ✅ **PRIMARY:** Use Git Bash for all git operations on Windows
 - ✅ Use only ASCII characters in commit messages (no Unicode/emoji)
 - ✅ Use approved ASCII replacements: `[PASS]`, `[FAIL]`, `[OK]`, `[DONE]`
 - ✅ Document what was tested in commit message
@@ -2758,17 +3032,19 @@ Approved ASCII replacements ONLY:
 ---
 
 **Revision History:**
+- **2026-02-20 (v11): Cross-Project Portability Refactor** - Added explicit global scope statement; generalized hardcoded project path examples (`<project-folder>`); reframed ClearMeet-titled incidents as stack-agnostic case studies; generalized output-quality wording beyond MOM-specific content; converted Git Bash section into an optional Windows project profile; clarified that historical/case-study sections are examples to apply across projects
+- **2026-02-20 (v10): Context Cleanup Pass** - Updated virtual environment examples to use ClearMeet naming (`clearmeet` instead of `pp2-practice-bot`); refreshed internal documentation pointers (`session_log.md`, `tests/`); archived outdated non-ClearMeet sprint metrics into a legacy reference note; normalized "Code Quality Standards Achieved" into project-agnostic target-state criteria
 - **2026-02-20 (v9): Hosted Deployment Addendum + Streamlit Rerun Discipline** - Added hosted dependency checks, version pinning guidance, and system dependency declaration for cloud deployments; added Streamlit rerun caching discipline to prevent unintended reprocessing; required hosted smoke tests for end-to-end verification
 - **2026-02-19 (v8): Git Bash as Required Standard** - Upgraded Git Bash from "optional recommendation" to "REQUIRED team standard" (v7 was incomplete approach); Added "Why Git Bash is the standard for ClearMeet" section emphasizing quality culture alignment; Created detailed "Setup Guide: Switching to Git Bash" for team onboarding; Added "Why This Reflects Our Quality Culture" section explaining how this standard demonstrates commitment to highest quality; Established daily workflow division: PowerShell for Python/Flask operations, Git Bash exclusively for git operations; Made clear that cosmetic errors undermine professionalism and damage credibility; Updated all requirements to mandate Git Bash; Secondary fallback (ASCII-only messages) now clearly marked as "minimum if team refuses Git Bash" (not recommended); Rationale: Single cosmetic error affects entire credibility - preventing the issue is better than working around it; Philosophy: "We care enough to eliminate eyesores entirely"
 - **2026-02-19 (v7): Git Best Practices & ASCII Commit Messages** - Added comprehensive Git best practices section addressing PowerShell Unicode encoding issues; Established ASCII-only commit message standard to prevent encoding errors; Documented three solutions (ASCII messages, Git Bash, UTF-8 config); Updated commit message format to use [PASS]/[FAIL] instead of Unicode; Added tool comparison table and recommendations; Commits with special characters will no longer cause error messages
 - **2026-02-16 (v6): Audio Chunking for Large Files** - Implemented time-based audio chunking to handle files >20MB (up to 200MB); Used lazy import pattern for pydub to avoid Python 3.13 audioop compatibility issues when not chunking; Added Phase 1 progress UI (loading overlay with spinner) to inform users during long transcription operations; Updated validation to accept larger files (16MB → 200MB); Maintained backward compatibility for small files (<20MB) using single-file transcription; Design decision: Simple time-based chunking (Option B) over silence detection (Option A) for faster implementation and reliability; Testing approach: Verified existing tests still pass (17/19 audio tests), chunking tested with large file; Future enhancement: Real-time progress updates via SSE/WebSocket (Phase 2); Key lesson: Lazy imports can resolve dependency conflicts while maintaining functionality
 - **2026-02-16 (v5): ClearMeet Frontend Testing Gap** - Added Principle 5 "Frontend/UI Testing - The Backend Test Blind Spot" after 138/138 tests passed but form submission failed due to JavaScript bug; Added comprehensive lesson learned documenting incident where tab-switching code cleared form values; Added Quick Reference "Before Every Commit" checklist at document top; Added Testing Strategy Decision Matrix with clear guidance on when to use backend tests vs manual testing vs E2E tests; Enhanced Principle 1 Protocol to explicitly require manual testing for UI changes (steps 5-7); Added Summary section with key takeaways, common mistakes, cost analysis, and critical workflows; Updated last modified date to 2026-02-16; Total additions: ~150 lines of critical frontend testing guidance
-- 2025-11-25 (v4): **Sprint 4 Task 1 Lesson** - Added critical "Research APIs Before Integration Tests" lesson from Sprint 4 Task 1 experience (37+ API mismatches), Enhanced Pre-Implementation Checklist with Integration Test Research Protocol (mandatory 6-step process), Updated Development Workflow Phase 1 to 15-30% with integration test research requirements, Documented time savings (44% reduction) from proper API research, Current metrics: 562 tests (30 new integration tests)
-- 2025-11-24 (v3): **Sprint 3 Complete** - Added 10 Sprint 3 lessons (dataclasses+enums, statistical analysis, TDD acceleration, comprehensive fixtures, human-readable reports, edge case testing, integration workflows, commit discipline, 100% pass rate, deque for sliding windows), Updated metrics to 532 tests, Documented 87 tests/day velocity (61% increase)
+- 2025-11-25 (v4): **Sprint 4 Task 1 Lesson (Legacy Snapshot)** - Added critical "Research APIs Before Integration Tests" lesson from Sprint 4 Task 1 experience (37+ API mismatches), enhanced pre-implementation checklist with integration test research protocol, and documented time savings from API research
+- 2025-11-24 (v3): **Sprint 3 Complete (Legacy Snapshot)** - Added sprint lessons (dataclasses+enums, statistical analysis, TDD acceleration, fixtures, reporting, edge cases, integration workflows, commit discipline, pass-rate rigor)
 - 2025-11-24 (v2): **Zero Warnings Policy** - Updated Principle 0 to require zero warnings (not just zero failures), Added warning investigation requirement to all checklists and protocols, Fixed SQLAlchemy deprecation warning (declarative_base import), Documented warning resolution in Sprint 2 history
-- 2025-11-24 (v1): Added Sprint 2 lessons (multi-dimensional validation, two-layer risk management, database persistence, visual feedback, multi-gate approval, incremental testing, test quality focus, velocity compounding), Updated project metrics to 393 tests
-- 2025-11-22: Added Prime Directive Principle 0 (100% Test Pass Rate), Week 4 Day 4 lessons, Deletion Protocol, Project Metrics
-- 2025-11-21: Initial creation based on Week 4 Day 3 lessons learned
+- 2025-11-24 (v1): Added Sprint 2 lessons (legacy snapshot) including validation, risk management, persistence, and incremental testing guidance
+- 2025-11-22: Added Prime Directive Principle 0 (100% test pass requirement), historical Day 4 lessons, and deletion protocol
+- 2025-11-21: Initial creation with historical Day 3 lessons learned
 
 **Next Review:** After next major incident or quarterly (next: May 2026)
 
