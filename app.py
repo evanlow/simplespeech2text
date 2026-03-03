@@ -19,7 +19,7 @@ from punctuation import punctuate_text
 st.set_page_config(page_title="Simple Text2Speech - Speech to Text", page_icon="🎙️")
 st.title("Speech to Text")
 st.write("Upload an audio or video file (m4a, mp3, mp4, wav) to transcribe it.")
-st.caption("💡 For large files (>200MB), use the URL option below instead of uploading.")
+st.caption("💡 For large files (>200MB), use the URL option below (supports Google Drive, Dropbox, direct links).")
 
 @st.cache_resource
 def prepare_model() -> Path:
