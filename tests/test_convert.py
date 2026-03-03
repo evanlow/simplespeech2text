@@ -55,6 +55,26 @@ class TestConvertToWav(unittest.TestCase):
         self.assertTrue(output_path.exists())
         self.assertEqual(output_path.suffix.lower(), ".wav")
 
+    def test_mp4_video_file_converts_successfully(self) -> None:
+        """Test that MP4 video files can be converted (audio extraction)."""
+        with tempfile.TemporaryDirectory(prefix="test_convert_src_") as src_dir:
+            source_path = Path(src_dir) / "sample.mp4"
+            source_path.write_bytes(b"video")
+
+            def fake_run(command, capture_output, text, check):
+                # Verify ffmpeg command includes the MP4 file
+                self.assertIn(str(source_path), [str(arg) for arg in command])
+                output_path = Path(command[-1])
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                output_path.write_bytes(b"RIFF")
+                return Mock(returncode=0, stderr="")
+
+            with patch("convert.subprocess.run", side_effect=fake_run):
+                output_path = convert_to_wav(source_path)
+
+        self.assertTrue(output_path.exists())
+        self.assertEqual(output_path.suffix.lower(), ".wav")
+
 
 if __name__ == "__main__":
     unittest.main()

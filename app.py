@@ -16,7 +16,7 @@ from punctuation import punctuate_text
 
 st.set_page_config(page_title="Simple Text2Speech - Speech to Text", page_icon="🎙️")
 st.title("Speech to Text")
-st.write("Upload an audio file (m4a, mp3, wav) to transcribe it.")
+st.write("Upload an audio or video file (m4a, mp3, mp4, wav) to transcribe it.")
 
 @st.cache_resource
 def prepare_model() -> Path:
@@ -37,7 +37,7 @@ st.caption(f"Model ready: {model_path}")
 
 uploaded_file = st.file_uploader(
     "Choose an audio file",
-    type=["m4a", "mp3", "wav"],
+    type=["m4a", "mp3", "mp4", "wav"],
 )
 
 save_words = st.checkbox("Include word timestamps in JSON output", value=False)
@@ -45,8 +45,8 @@ save_words = st.checkbox("Include word timestamps in JSON output", value=False)
 if uploaded_file is not None:
     suffix = Path(uploaded_file.name).suffix.lower()
 
-    if suffix not in {".m4a", ".mp3", ".wav"}:
-        st.error("Unsupported file type. Please upload m4a, mp3, or wav.")
+    if suffix not in {".m4a", ".mp3", ".mp4", ".wav"}:
+        st.error("Unsupported file type. Please upload m4a, mp3, mp4, or wav.")
         st.stop()
 
     file_bytes = uploaded_file.getvalue()
