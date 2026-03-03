@@ -5,11 +5,13 @@ import json
 import os
 import tempfile
 from pathlib import Path
+from urllib.parse import urlparse
 
 import streamlit as st
 
 from convert import convert_to_wav
 from core import transcribe_file
+from download import download_from_url
 from model_setup import ensure_model_available
 from punctuation import punctuate_text
 
@@ -17,6 +19,7 @@ from punctuation import punctuate_text
 st.set_page_config(page_title="Simple Text2Speech - Speech to Text", page_icon="🎙️")
 st.title("Speech to Text")
 st.write("Upload an audio or video file (m4a, mp3, mp4, wav) to transcribe it.")
+st.caption("💡 For large files (>200MB), use the URL option below instead of uploading.")
 
 @st.cache_resource
 def prepare_model() -> Path:
@@ -35,29 +38,68 @@ except Exception as exc:
 
 st.caption(f"Model ready: {model_path}")
 
-uploaded_file = st.file_uploader(
-    "Choose an audio file",
-    type=["m4a", "mp3", "mp4", "wav"],
+# Two input methods: upload or URL
+input_method = st.radio(
+    "Choose input method:",
+    ["Upload file", "Download from URL"],
+    horizontal=True
 )
+
+uploaded_file = None
+url_input = None
+source_name = None
+
+if input_method == "Upload file":
+    uploaded_file = st.file_uploader(
+        "Choose an audio or video file",
+        type=["m4a", "mp3", "mp4", "wav"],
+    )
+    if uploaded_file is not None:
+        source_name = uploaded_file.name
+else:
+    url_input = st.text_input(
+        "Enter URL to audio/video file:",
+        placeholder="https://example.com/audio.mp3"
+    )
+    if url_input:
+        # Extract filename from URL for display
+        url_path = Path(urlparse(url_input).path)
+        source_name = url_path.name if url_path.name else "download"
 
 save_words = st.checkbox("Include word timestamps in JSON output", value=False)
 
-if uploaded_file is not None:
-    suffix = Path(uploaded_file.name).suffix.lower()
-
-    if suffix not in {".m4a", ".mp3", ".mp4", ".wav"}:
-        st.error("Unsupported file type. Please upload m4a, mp3, mp4, or wav.")
+# Process the file (either uploaded or from URL)
+if uploaded_file is not None or url_input:
+    # Determine file suffix and create cache key
+    if uploaded_file is not None:
+        suffix = Path(uploaded_file.name).suffix.lower()
+        file_bytes = uploaded_file.getvalue()
+        file_hash = hashlib.sha256(file_bytes).hexdigest()
+        cache_key = f"upload:{uploaded_file.name}:{len(file_bytes)}:{file_hash}:{save_words}"
+    else:
+        # For URL, use URL itself as part of cache key
+        suffix = Path(urlparse(url_input).path).suffix.lower() or ".tmp"
+        cache_key = f"url:{url_input}:{save_words}"
+    
+    if suffix not in {".m4a", ".mp3", ".mp4", ".wav", ".tmp"}:
+        st.error("Unsupported file type. Please use m4a, mp3, mp4, or wav files.")
         st.stop()
 
-    file_bytes = uploaded_file.getvalue()
-    file_hash = hashlib.sha256(file_bytes).hexdigest()
-    upload_key = f"{uploaded_file.name}:{len(file_bytes)}:{file_hash}:{save_words}"
-
-    if st.session_state.get("last_upload_key") != upload_key:
-        with tempfile.TemporaryDirectory(prefix="stt_upload_") as temp_dir:
+    if st.session_state.get("last_cache_key") != cache_key:
+        with tempfile.TemporaryDirectory(prefix="stt_process_") as temp_dir:
             temp_path = Path(temp_dir)
-            source_path = temp_path / uploaded_file.name
-            source_path.write_bytes(file_bytes)
+            
+            # Get the source file (either from upload or URL)
+            if uploaded_file is not None:
+                source_path = temp_path / uploaded_file.name
+                source_path.write_bytes(file_bytes)
+            else:
+                try:
+                    with st.spinner("Downloading file from URL..."):
+                        source_path = download_from_url(url_input)
+                except Exception as exc:
+                    st.error(f"Download failed: {exc}")
+                    st.stop()
 
             try:
                 with st.spinner("Preparing audio..."):
@@ -77,12 +119,12 @@ if uploaded_file is not None:
 
         transcription["text"] = punctuated_text
 
-        st.session_state["last_upload_key"] = upload_key
+        st.session_state["last_cache_key"] = cache_key
         st.session_state["last_transcription"] = transcription
         st.session_state["last_punctuated"] = punctuated_text
         st.session_state["punctuation_applied"] = punctuation_applied
         st.session_state["punctuation_error"] = punctuation_error
-        st.session_state["last_file_stem"] = Path(uploaded_file.name).stem
+        st.session_state["last_file_stem"] = Path(source_name).stem
 
     transcription = st.session_state.get("last_transcription", {})
     transcript_text = transcription.get("text", "")
@@ -102,7 +144,7 @@ if uploaded_file is not None:
     txt_bytes = transcript_text.encode("utf-8")
     json_bytes = json.dumps(transcription, indent=2, ensure_ascii=False).encode("utf-8")
 
-    file_stem = st.session_state.get("last_file_stem", Path(uploaded_file.name).stem)
+    file_stem = st.session_state.get("last_file_stem", "transcript")
 
     st.download_button(
         label="Download .txt",
