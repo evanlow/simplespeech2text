@@ -17,6 +17,9 @@ __pycache__/
 model/
 *.zip
 
+# Manual test scripts
+test_google_drive.py
+
 # OS/editor noise
 .DS_Store
 Thumbs.db
