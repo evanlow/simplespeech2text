@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+from pathlib import Path
 from unittest.mock import Mock, patch
 
 from download import download_from_url, _convert_google_drive_url
@@ -125,22 +126,33 @@ class TestDownloadFromUrl(unittest.TestCase):
 
     def test_google_drive_sharing_url_converted(self) -> None:
         """Test that Google Drive sharing URLs are converted to direct download."""
-        fake_content = b"audio data"
         sharing_url = "https://drive.google.com/file/d/abc123/view?usp=sharing"
         
-        with patch("download.requests.get") as mock_get:
-            mock_response = Mock()
-            mock_response.raise_for_status.return_value = None
-            mock_response.iter_content.return_value = [fake_content]
-            mock_response.headers = {'Content-Type': 'audio/mpeg'}
-            mock_get.return_value = mock_response
+        # Create a temp directory that will persist for this test
+        import tempfile
+        test_temp_dir = Path(tempfile.mkdtemp(prefix="test_gdown_"))
+        fake_file = test_temp_dir / "test_file.mp4"
+        fake_file.write_bytes(b"audio data")
+        
+        with patch("download.gdown.download") as mock_gdown, \
+             patch("os.chdir"), \
+             patch("os.getcwd", return_value="/fake/dir"):
             
-            download_from_url(sharing_url)
+            # Mock gdown.download to return our pre-created fake file path
+            mock_gdown.return_value = str(fake_file)
             
-            # Verify the converted URL was used
-            called_url = mock_get.call_args[0][0]
-            self.assertIn("uc?export=download", called_url)
+            result_path = download_from_url(sharing_url)
+            
+            # Verify gdown was called with the correct file ID
+            mock_gdown.assert_called_once()
+            call_args = mock_gdown.call_args
+            # Check in both positional and keyword arguments
+            called_url = call_args[0][0] if call_args[0] else call_args[1].get('url', '')
             self.assertIn("id=abc123", called_url)
+            
+            # Verify file was created
+            self.assertTrue(result_path.exists())
+            self.assertGreater(result_path.stat().st_size, 0)
 
 
 if __name__ == "__main__":

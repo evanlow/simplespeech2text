@@ -2,3 +2,4 @@ streamlit
 vosk
 pydub
 requests
+gdown

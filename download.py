@@ -5,6 +5,7 @@ import tempfile
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
 
+import gdown
 import requests
 
 
@@ -55,20 +56,71 @@ def download_from_url(url: str, chunk_size: int = 8192) -> Path:
     # Convert Google Drive URLs to direct download format
     if "drive.google.com" in url:
         url = _convert_google_drive_url(url)
+        # Use gdown for Google Drive downloads (handles auth, virus scans, etc.)
+        is_google_drive = True
+    else:
+        is_google_drive = False
     
     # Validate URL format
     parsed = urlparse(url)
     if not parsed.scheme or not parsed.netloc:
         raise ValueError(f"Invalid URL format: {url}")
     
-    # Determine file extension from URL (will try headers if not found)
-    url_path = Path(parsed.path)
-    suffix = url_path.suffix.lower() if url_path.suffix else None
-    
-    # Create temporary file
+    # Create temporary directory
     temp_dir = Path(tempfile.mkdtemp(prefix="stt_download_"))
     
     try:
+        # Use gdown for Google Drive files (more reliable)
+        if is_google_drive:
+            # Extract file ID from URL
+            file_id_match = re.search(r'id=([a-zA-Z0-9_-]+)', url)
+            if not file_id_match:
+                raise ValueError("Cannot extract file ID from Google Drive URL")
+            
+            file_id = file_id_match.group(1)
+            
+            # Use gdown.cached_download which handles filenames better
+            # Or download and rename based on content inspection
+            import os
+            original_cwd = os.getcwd()
+            try:
+                # Change to temp directory so gdown downloads there
+                os.chdir(str(temp_dir))
+                
+                # Download using gdown - fuzzy mode will try to get the real filename
+                output_path = gdown.download(
+                    f"https://drive.google.com/uc?id={file_id}",
+                    quiet=False,
+                    fuzzy=True
+                )
+            except Exception as exc:
+                raise RuntimeError(
+                    f"Google Drive download failed: {exc}. "
+                    "Please ensure the file sharing is set to 'Anyone with the link can view'."
+                ) from exc
+            finally:
+                os.chdir(original_cwd)
+            
+            # Find the downloaded file
+            if output_path and Path(output_path).exists():
+                return Path(output_path)
+            
+            # Fallback: look for any file in temp_dir
+            actual_files = list(temp_dir.glob("*"))
+            if not actual_files:
+                raise RuntimeError("Google Drive download completed but file not found")
+            
+            downloaded_file = actual_files[0]
+            if downloaded_file.stat().st_size == 0:
+                raise RuntimeError("Downloaded file is empty")
+            
+            return downloaded_file
+        
+        # For non-Google Drive URLs, use requests
+        # Determine file extension from URL (will try headers if not found)
+        url_path = Path(parsed.path)
+        suffix = url_path.suffix.lower() if url_path.suffix else None
+        
         # Download with streaming to handle large files
         response = requests.get(url, stream=True, timeout=30, allow_redirects=True)
         response.raise_for_status()
@@ -90,60 +142,6 @@ def download_from_url(url: str, chunk_size: int = 8192) -> Path:
             suffix = ".tmp"
         
         temp_file = temp_dir / f"downloaded{suffix}"
-        
-        # Handle Google Drive virus scan warning for large files
-        is_google_drive = "drive.google.com" in url
-        if is_google_drive:
-            # Check if we got a virus scan warning page
-            content_type = response.headers.get('Content-Type', '')
-            if 'text/html' in content_type:
-                # Read the content to check for virus scan warning
-                content = b''
-                for chunk in response.iter_content(chunk_size=8192):
-                    content += chunk
-                    if len(content) > 100000:  # Only check first 100KB
-                        break
-                
-                text = content.decode('utf-8', errors='ignore')
-                
-                # Look for Google Drive virus scan confirmation
-                confirm_match = re.search(r'confirm=([a-zA-Z0-9_-]+)', text)
-                uuid_match = re.search(r'uuid=([a-zA-Z0-9_-]+)', text)
-                
-                if confirm_match or 'Google Drive - Virus scan warning' in text:
-                    # Extract file ID from URL
-                    file_id_match = re.search(r'id=([a-zA-Z0-9_-]+)', url)
-                    if not file_id_match:
-                        raise RuntimeError(
-                            "Google Drive file requires confirmation but file ID not found in URL"
-                        )
-                    
-                    file_id = file_id_match.group(1)
-                    
-                    # Build confirmation URL
-                    confirm_url = f"https://drive.google.com/uc?export=download&id={file_id}"
-                    if confirm_match:
-                        confirm_url += f"&confirm={confirm_match.group(1)}"
-                    if uuid_match:
-                        confirm_url += f"&uuid={uuid_match.group(1)}"
-                    
-                    # Make new request with confirmation
-                    response = requests.get(confirm_url, stream=True, timeout=30, allow_redirects=True)
-                    response.raise_for_status()
-                    
-                    # Verify we got actual content this time
-                    new_content_type = response.headers.get('Content-Type', '')
-                    if 'text/html' in new_content_type:
-                        raise RuntimeError(
-                            "Google Drive download failed - still receiving HTML. "
-                            "The file may not be publicly accessible or the sharing link is incorrect."
-                        )
-                else:
-                    # We got HTML but it's not the virus scan page - probably an error
-                    raise RuntimeError(
-                        f"Google Drive download returned HTML instead of file. "
-                        f"Please check that the file is publicly accessible. Content preview: {text[:200]}"
-                    )
         
         # Write in chunks
         with open(temp_file, "wb") as f:
